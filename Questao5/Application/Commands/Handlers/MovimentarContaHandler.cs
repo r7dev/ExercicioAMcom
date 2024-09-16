@@ -4,6 +4,7 @@ using Domain.Entities;
 using MediatR;
 using Newtonsoft.Json;
 using Questao5.Application.Commands.Requests;
+using Questao5.Infrastructure.Services;
 using System.Data;
 using System.Resources;
 
@@ -12,10 +13,12 @@ namespace Questao5.Application.Commands.Handlers
 	public class MovimentarContaHandler : IRequestHandler<MovimentarContaCommand, Result>
 	{
 		private readonly IDbConnection _dbConnection;
+		private readonly IDapperWrapper _dapperWrapper;
 
-		public MovimentarContaHandler(IDbConnection dbConnection)
+		public MovimentarContaHandler(IDbConnection dbConnection, IDapperWrapper dapperWrapper)
 		{
 			_dbConnection = dbConnection;
+			_dapperWrapper = dapperWrapper;
 		}
 
 		public async Task<Result> Handle(MovimentarContaCommand request, CancellationToken cancellationToken)
@@ -23,7 +26,8 @@ namespace Questao5.Application.Commands.Handlers
 			ResourceManager rm = new ResourceManager("Questao5.Domain.Language.Error", typeof(MovimentarContaHandler).Assembly);
 
 			// Validações de negócio
-			var conta = await _dbConnection.QuerySingleOrDefaultAsync<ContaCorrente>(
+			var conta = await _dapperWrapper.QuerySingleOrDefaultAsync<ContaCorrente>(
+				_dbConnection,
 				"SELECT * FROM contacorrente WHERE idcontacorrente = @IdContaCorrente",
 				new { request.IdContaCorrente });
 
@@ -41,7 +45,8 @@ namespace Questao5.Application.Commands.Handlers
 				return Result.Fail("INVALID_TYPE", rm.GetString("INVALID_TYPE"));
 
 			// Verificar idempotência
-			var idempotencia = await _dbConnection.QuerySingleOrDefaultAsync<Idempotencia>(
+			var idempotencia = await _dapperWrapper.QuerySingleOrDefaultAsync<Idempotencia>(
+				_dbConnection,
 				"SELECT * FROM idempotencia WHERE chave_idempotencia = @IdRequisicao",
 				new { request.IdRequisicao });
 
@@ -62,11 +67,12 @@ namespace Questao5.Application.Commands.Handlers
 				request.Valor
 			};
 
-			await _dbConnection.ExecuteAsync(sql, parameters);
+			await _dapperWrapper.ExecuteAsync(_dbConnection, sql, parameters);
 
 			// Salvar idempotência
 			var resultado = new { IdMovimento = idMovimento };
-			await _dbConnection.ExecuteAsync(
+			await _dapperWrapper.ExecuteAsync(
+				_dbConnection,
 				@"INSERT INTO idempotencia (chave_idempotencia, requisicao, resultado)
 					  VALUES (@ChaveIdempotencia, @Requisicao, @Resultado)",
 				new

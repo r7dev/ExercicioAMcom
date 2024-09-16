@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Data.Sqlite;
+using Questao5.Infrastructure.Services;
 using Questao5.Infrastructure.Sqlite;
 using System.Data;
 using System.Reflection;
@@ -17,6 +18,9 @@ builder.Services.AddSingleton<IDatabaseBootstrap, DatabaseBootstrap>();
 
 // Register IDbConnection
 builder.Services.AddTransient<IDbConnection>(sp => new SqliteConnection(builder.Configuration.GetValue<string>("DatabaseName", "Data Source=database.sqlite")));
+
+// Register DapperWrapper
+builder.Services.AddTransient<IDapperWrapper, DapperWrapper>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
